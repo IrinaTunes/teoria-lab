@@ -124,7 +124,7 @@ class TheoryTest {
         assertEquals(listOf(0, 3, 6), Chords.DIMINISHED)
         assertEquals(listOf(0, 4, 8), Chords.AUGMENTED)
         assertEquals("мажор", Chords.typeByOffsets(listOf(0, 4, 7)))
-        assertEquals("минор", Chords.typeByOffsets(listOf(7, 12, 15)))
+        assertEquals("минор", Chords.typeByOffsets(listOf(7, 10, 14)))
         assertEquals("уменьшённый", Chords.typeByOffsets(listOf(0, 3, 6)))
         assertEquals("увеличенный", Chords.typeByOffsets(listOf(0, 4, 8)))
         assertNull(Chords.typeByOffsets(listOf(0, 5, 7)))

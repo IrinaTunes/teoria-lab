@@ -252,47 +252,45 @@ object QuizGenerator {
         if (cards.isEmpty()) {
             return Question.Lit("Нет карточек", "", emptyList(), LitCard(0, "", "", "", ""), "none")
         }
-        val filterEpoch = topic.filter["epoch"]
-        val filterGenre = topic.filter["genre"]
-        val filterComposer = topic.filter["composer"]
+        val allCards = ContentRepo.cards()
         val mode = when {
-            filterEpoch != null -> "epochComposer"
-            filterGenre != null -> "work"
-            filterComposer != null -> "composer"
+            topic.filter["epoch"] != null -> "epochComposer"
+            topic.filter["genre"] != null -> "work"
+            topic.filter["composer"] != null -> "composer"
             else -> listOf("epoch", "work", "composer")[rnd.nextInt(3)]
         }
         return when (mode) {
             "epochComposer" -> {
                 val card = cards[rnd.nextInt(cards.size)]
-                val answer = card.composer
-                val others = ContentRepo.cards().filter { it.epoch != card.epoch }
-                    .map { it.composer }.distinct().shuffled(rnd).take(3)
-                val options = (listOf(answer) + others).toMutableList().also { it.shuffleInPlace(rnd) }
-                Question.Lit("Кто из композиторов — представитель эпохи «${card.epoch}»?", answer, options, card, "epoch")
+                val pool = allCards.filter { it.epoch != card.epoch }.map { it.composer }.distinct()
+                Question.Lit(
+                    "Кто из композиторов — представитель эпохи «${card.epoch}»?",
+                    card.composer, fourOptions(pool, card.composer, rnd), card, "epoch"
+                )
             }
             "epoch" -> {
                 val card = cards[rnd.nextInt(cards.size)]
-                val answer = card.epoch
-                val others = ContentRepo.cards().map { it.epoch }.distinct()
-                    .filter { it != answer }.shuffled(rnd).take(3)
-                val options = (listOf(answer) + others).toMutableList().also { it.shuffleInPlace(rnd) }
-                Question.Lit("В какую эпоху творил ${card.composer}?", answer, options, card, "epoch")
+                val pool = allCards.map { it.epoch }.distinct()
+                Question.Lit(
+                    "В какую эпоху творил ${card.composer}?",
+                    card.epoch, fourOptions(pool, card.epoch, rnd), card, "epoch"
+                )
             }
             "composer" -> {
                 val card = cards[rnd.nextInt(cards.size)]
-                val answer = card.work
-                val others = ContentRepo.cards().filter { it.composer != card.composer }
-                    .shuffled(rnd).take(3).map { it.work }
-                val options = (listOf(answer) + others).toMutableList().also { it.shuffleInPlace(rnd) }
-                Question.Lit("Какое произведение написал ${card.composer}?", answer, options, card, "composer")
+                val pool = allCards.map { it.work }.distinct()
+                Question.Lit(
+                    "Какое произведение написал ${card.composer}?",
+                    card.work, fourOptions(pool, card.work, rnd), card, "composer"
+                )
             }
             else -> {
                 val card = cards[rnd.nextInt(cards.size)]
-                val answer = card.composer
-                val others = ContentRepo.cards().map { it.composer }.distinct()
-                    .filter { it != answer }.shuffled(rnd).take(3)
-                val options = (listOf(answer) + others).toMutableList().also { it.shuffleInPlace(rnd) }
-                Question.Lit("Кто автор «${card.work}»?", answer, options, card, "work")
+                val pool = allCards.map { it.composer }.distinct()
+                Question.Lit(
+                    "Кто автор «${card.work}»?",
+                    card.composer, fourOptions(pool, card.composer, rnd), card, "work"
+                )
             }
         }
     }
