@@ -2,7 +2,7 @@ package ru.teoria.lab.core
 
 import java.io.File
 
-/** Загружает assets/content/*.json из рабочей папки модуля для JVM-тестов. */
+/** Загружает JSON-файлы контента из папки assets/content для JVM-тестов. */
 object TestContent {
     private var initialized = false
 

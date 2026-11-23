@@ -114,7 +114,7 @@ data class Generators(
 }
 
 /**
- * Единая точка доступа к контенту. Данные лежат в assets/content/*.json,
+ * Единая точка доступа к контенту. Данные лежат в JSON-файлах папки assets/content,
  * загрузчик передаётся снаружи: Android читает assets, тесты — файлы модуля.
  */
 object ContentRepo {
