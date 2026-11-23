@@ -80,10 +80,10 @@ fun PrimaryButton(
 @Composable
 fun OptionButton(
     text: String,
-    onClick: () -> Unit,
     enabled: Boolean = true,
     state: OptionState = OptionState.NEUTRAL,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
     val bg = when (state) {
         OptionState.NEUTRAL -> Color(0xFF232733)

@@ -1,7 +1,6 @@
 package ru.teoria.lab.data
 
 import android.content.Context
-import ru.teoria.lab.core.Attempt
 import ru.teoria.lab.core.Days
 import ru.teoria.lab.core.Leveling
 import ru.teoria.lab.core.SpacedRepetition

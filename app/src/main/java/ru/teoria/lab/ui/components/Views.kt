@@ -375,7 +375,7 @@ fun ScaleLadder(
     val onSurface = MaterialTheme.colorScheme.onSurface
     Canvas(modifier = modifier.fillMaxWidth().height(height)) {
         val rowH = size.height / rows
-        for (i in rows.indices.reversed()) {
+        for (i in (0 until rows).reversed()) {
             val degree = i
             val y = (rows - 1 - i) * rowH
             val pc = (rootMidi + MAJOR_STEPS[degree]) % 12
@@ -404,8 +404,8 @@ fun ScaleLadder(
 @Composable
 fun NotePicker(
     enabled: Boolean,
-    onPick: (Note) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPick: (Note) -> Unit
 ) {
     var accidental by remember { mutableStateOf(0) }
     var octave by remember { mutableStateOf(4) }

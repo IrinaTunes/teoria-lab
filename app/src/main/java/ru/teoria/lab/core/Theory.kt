@@ -104,7 +104,7 @@ data class Note(
         /** Парсит «C#4», «Bb3», «F4». */
         fun parse(text: String): Note {
             val t = text.trim()
-            val letter = LETTER_LATIN.indexOf(t[0].uppercaseChar())
+            val letter = LETTER_LATIN.indexOfFirst { it.equals(t[0].toString(), ignoreCase = true) }
             require(letter >= 0) { "bad note: $text" }
             var acc = 0
             var octaveStart = 1
