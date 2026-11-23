@@ -7,10 +7,13 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import ru.teoria.lab.core.ContentRepo
 import ru.teoria.lab.core.Course
 import ru.teoria.lab.core.Instruments
+import ru.teoria.lab.core.MusicTheme
 import ru.teoria.lab.core.Question
 import ru.teoria.lab.core.QuizGenerator
+import ru.teoria.lab.core.ThemeRepo
 import ru.teoria.lab.core.TopicDef
 import ru.teoria.lab.core.Topics
 import ru.teoria.lab.core.correctLabel
@@ -50,13 +53,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var sessionCorrect by mutableStateOf(0)
         private set
-    val sessionSize = 8
+    val sessionSize: Int get() = ContentRepo.generators().defaultSession.coerceIn(4, 20)
     var sessionFinished by mutableStateOf(false)
         private set
     var questionKey by mutableStateOf(0)
         private set
 
     init {
+        ContentRepo.init { name ->
+            app.assets.open("content/$name").bufferedReader().use { it.readText() }
+        }
         viewModelScope.launch {
             repo.seedIfNeeded()
             refreshSync()
@@ -144,4 +150,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val dueId = snapshot?.dueTopicIds?.firstOrNull()
         return dueId?.let { Topics.byId(it) } ?: Topics.ALL.first()
     }
+
+    fun themeById(id: String): MusicTheme? = ThemeRepo.byId(id)
+
+    fun sectionsOf(course: Course): List<ru.teoria.lab.core.ContentSection> = ContentRepo.course(course).sections
 }

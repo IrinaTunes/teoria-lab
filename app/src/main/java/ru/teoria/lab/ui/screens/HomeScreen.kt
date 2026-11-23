@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ru.teoria.lab.core.Course
+import ru.teoria.lab.core.ContentRepo
 import ru.teoria.lab.core.Days
 import ru.teoria.lab.core.Instruments
 import ru.teoria.lab.core.Instrument
@@ -136,6 +137,9 @@ private fun InstrumentRow(instrument: Instrument, selected: Boolean, onClick: ()
 fun HomeScreen(
     vm: AppViewModel,
     onOpenTopic: (TopicDef) -> Unit,
+    onOpenCourse: (Course) -> Unit,
+    onLibrary: () -> Unit,
+    onComposers: () -> Unit,
     onProgress: () -> Unit,
     onSettings: () -> Unit
 ) {
@@ -227,6 +231,11 @@ fun HomeScreen(
                 text = "Тренировка по очереди → ${next.title}",
                 onClick = { onOpenTopic(next) }
             )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedAction("Библиотека", Modifier.weight(1f)) { onLibrary() }
+                OutlinedAction("Слушать автора", Modifier.weight(1f)) { onComposers() }
+            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -238,17 +247,46 @@ fun HomeScreen(
                     text = course.title,
                     selected = vm.selectedCourse == course,
                     modifier = Modifier.weight(1f),
-                    onClick = { vm.selectedCourse = course }
+                    onClick = { onOpenCourse(course) }
                 )
             }
         }
         Spacer(Modifier.height(12.dp))
 
-        Topics.byCourse(vm.selectedCourse).forEach { topic ->
-            val mastery = vm.masteryOf(topic.id).toFloat()
-            val dueTopic = vm.isDue(topic.id)
-            TopicRow(topic, mastery, dueTopic) { onOpenTopic(topic) }
-            Spacer(Modifier.height(8.dp))
+        val sections = vm.sectionsOf(vm.selectedCourse)
+        Text(
+            "${ContentRepo.course(vm.selectedCourse).topicCount} тем в ${sections.size} разделах",
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        sections.forEach { section ->
+            val avg = section.topics.map { vm.masteryOf(it.id) }.average().takeIf { !it.isNaN() } ?: 0.0
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Surface1)
+                    .clickable { onOpenCourse(vm.selectedCourse) }
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(section.title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text(
+                        "${section.topics.size} тем · mastery ${(avg * 100).toInt()}%",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                MasteryRing(
+                    progress = avg.toFloat(),
+                    label = "${(avg * 100).toInt()}%",
+                    sizeDp = 40,
+                    color = if (avg >= 0.8) Green else if (avg >= 0.5) Accent else Red
+                )
+            }
         }
 
         Spacer(Modifier.height(8.dp))

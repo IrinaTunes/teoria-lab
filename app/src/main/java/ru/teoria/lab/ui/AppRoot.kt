@@ -1,5 +1,6 @@
 package ru.teoria.lab.ui
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,20 +25,30 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import ru.teoria.lab.ui.screens.ComposerScreen
+import ru.teoria.lab.ui.screens.ComposersScreen
 import ru.teoria.lab.ui.screens.ExerciseScreen
 import ru.teoria.lab.ui.screens.HomeScreen
 import ru.teoria.lab.ui.screens.InstrumentScreen
+import ru.teoria.lab.ui.screens.LibraryScreen
 import ru.teoria.lab.ui.screens.ProgressScreen
 import ru.teoria.lab.ui.screens.SettingsScreen
+import ru.teoria.lab.ui.screens.TopicScreen
 
 object Routes {
     const val INSTRUMENT = "instrument"
     const val INSTRUMENT_EDIT = "instrument_edit"
     const val HOME = "home"
+    const val LIBRARY = "library"
     const val PROGRESS = "progress"
     const val SETTINGS = "settings"
+    const val COMPOSERS = "composers"
+    const val COMPOSER = "composer/{name}"
+    const val TOPIC = "topic/{topicId}"
     const val EXERCISE = "exercise/{topicId}"
     fun exercise(topicId: String) = "exercise/$topicId"
+    fun topic(topicId: String) = "topic/$topicId"
+    fun composer(name: String) = "composer/${Uri.encode(name)}"
 }
 
 @Composable
@@ -47,7 +58,8 @@ fun AppRoot() {
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
     val start = remember { if (vm.onboarded) Routes.HOME else Routes.INSTRUMENT }
-    val showBar = route == Routes.HOME || route == Routes.PROGRESS || route == Routes.SETTINGS
+    val showBar = route == Routes.HOME || route == Routes.PROGRESS || route == Routes.SETTINGS ||
+        route == Routes.LIBRARY || route == Routes.COMPOSERS
 
     Scaffold(
         containerColor = Bg,
@@ -74,18 +86,50 @@ fun AppRoot() {
                 )
             }
             composable(Routes.INSTRUMENT_EDIT) {
-                InstrumentScreen(
-                    vm = vm,
-                    firstRun = false,
-                    onDone = { nav.popBackStack() }
-                )
+                InstrumentScreen(vm = vm, firstRun = false, onDone = { nav.popBackStack() })
             }
             composable(Routes.HOME) {
                 HomeScreen(
                     vm = vm,
-                    onOpenTopic = { topic -> nav.navigate(Routes.exercise(topic.id)) },
+                    onOpenTopic = { topic -> nav.navigate(Routes.topic(topic.id)) },
+                    onOpenCourse = {
+                        vm.selectedCourse = it
+                        nav.navigate(Routes.LIBRARY) { launchSingleTop = true }
+                    },
+                    onLibrary = { nav.navigate(Routes.LIBRARY) { launchSingleTop = true } },
+                    onComposers = { nav.navigate(Routes.COMPOSERS) { launchSingleTop = true } },
                     onProgress = { nav.navigate(Routes.PROGRESS) { launchSingleTop = true } },
                     onSettings = { nav.navigate(Routes.SETTINGS) { launchSingleTop = true } }
+                )
+            }
+            composable(Routes.LIBRARY) {
+                LibraryScreen(
+                    vm = vm,
+                    onOpenTopic = { id -> nav.navigate(Routes.topic(id)) },
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.TOPIC) { entry ->
+                val topicId = entry.arguments?.getString("topicId") ?: ""
+                TopicScreen(
+                    vm = vm,
+                    topicId = topicId,
+                    onTrain = { id -> nav.navigate(Routes.exercise(id)) },
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.COMPOSERS) {
+                ComposersScreen(
+                    onOpen = { name -> nav.navigate(Routes.composer(name)) },
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.COMPOSER) { entry ->
+                val name = entry.arguments?.getString("name") ?: ""
+                ComposerScreen(
+                    composer = name,
+                    onGuess = { topicId -> nav.navigate(Routes.exercise(topicId)) },
+                    onBack = { nav.popBackStack() }
                 )
             }
             composable(Routes.PROGRESS) {
@@ -99,11 +143,12 @@ fun AppRoot() {
                 )
             }
             composable(Routes.EXERCISE) { entry ->
-                val topicId = entry.arguments?.getString("topicId") ?: "solf-notes"
+                val topicId = entry.arguments?.getString("topicId") ?: ""
                 ExerciseScreen(
                     vm = vm,
                     topicId = topicId,
-                    onBack = { nav.popBackStack() }
+                    onBack = { nav.popBackStack() },
+                    onOpenComposer = { name -> nav.navigate(Routes.composer(name)) }
                 )
             }
         }
@@ -116,7 +161,7 @@ private fun BottomBar(route: String?, nav: NavHostController) {
         modifier = Modifier
             .fillMaxWidth()
             .background(Surface1)
-            .padding(vertical = 6.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -126,14 +171,20 @@ private fun BottomBar(route: String?, nav: NavHostController) {
                 launchSingleTop = true
             }
         }
-        BottomItem("Прогресс", route == Routes.PROGRESS, Modifier.weight(1f)) {
-            nav.navigate(Routes.PROGRESS) {
+        BottomItem("Библиотека", route == Routes.LIBRARY, Modifier.weight(1f)) {
+            nav.navigate(Routes.LIBRARY) {
                 popUpTo(Routes.HOME)
                 launchSingleTop = true
             }
         }
-        BottomItem("Настройки", route == Routes.SETTINGS, Modifier.weight(1f)) {
-            nav.navigate(Routes.SETTINGS) {
+        BottomItem("Слушать", route == Routes.COMPOSERS, Modifier.weight(1f)) {
+            nav.navigate(Routes.COMPOSERS) {
+                popUpTo(Routes.HOME)
+                launchSingleTop = true
+            }
+        }
+        BottomItem("Прогресс", route == Routes.PROGRESS, Modifier.weight(1f)) {
+            nav.navigate(Routes.PROGRESS) {
                 popUpTo(Routes.HOME)
                 launchSingleTop = true
             }
@@ -149,7 +200,7 @@ private fun BottomItem(text: String, selected: Boolean, modifier: Modifier = Mod
     ) {
         Text(
             text,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             color = if (selected) Accent else MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -18,7 +18,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ru.teoria.lab.core.Days
+import ru.teoria.lab.core.ContentRepo
+import ru.teoria.lab.core.Course
 import ru.teoria.lab.core.Leveling
 import ru.teoria.lab.core.SpacedRepetition
 import ru.teoria.lab.core.Topics
@@ -58,6 +63,8 @@ fun ProgressScreen(vm: AppViewModel, onBack: () -> Unit) {
     val accuracy = if (totalAttempts == 0) 0 else totalCorrect * 100 / totalAttempts
 
     val now = System.currentTimeMillis()
+    var expandedCourses by remember { mutableStateOf(setOf<Course>()) }
+    var expandedSections by remember { mutableStateOf(setOf<String>()) }
     val dayLabels = remember(now) {
         val fmt = SimpleDateFormat("d.M", Locale("ru"))
         (13 downTo 0).map { back ->
@@ -162,38 +169,96 @@ fun ProgressScreen(vm: AppViewModel, onBack: () -> Unit) {
         SectionCard {
             Text("Mastery по темам", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
             Text(
-                "% верных за последние 10 попыток; пока попыток меньше — знаменатель всё равно 10.",
+                "Всего ${ContentRepo.topicCount()} тем. % верных за последние 10 попыток; пока попыток меньше — знаменатель всё равно 10.",
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(10.dp))
-            Topics.ALL.forEach { topic ->
-                val mastery = (snapshot?.mastery?.get(topic.id) ?: 0.0).toFloat()
-                val srs = snapshot?.srs?.get(topic.id)
-                val dueText = when {
-                    srs == null -> "не начато"
-                    srs.dueAt <= now -> "к повторению"
-                    else -> "через ${ceil((srs.dueAt - now).toDouble() / SpacedRepetition.DAY_MS).toInt()} дн."
-                }
+            Spacer(Modifier.height(8.dp))
+            ContentRepo.courses().forEach { courseContent ->
+                val courseOpen = expandedCourses.contains(courseContent.course)
+                val courseAvg = courseContent.topics.map { snapshot?.mastery?.get(it.id) ?: 0.0 }
+                    .average().takeIf { !it.isNaN() } ?: 0.0
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Surface2.copy(alpha = 0.4f))
+                        .clickable {
+                            expandedCourses = if (courseOpen) expandedCourses - courseContent.course
+                            else expandedCourses + courseContent.course
+                        }
+                        .padding(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(topic.title, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text(courseContent.title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                         Text(
-                            "${topic.course.title} · $dueText · интервал ${srs?.intervalDays ?: 0} дн.",
+                            "${courseContent.sections.size} разделов · ${courseContent.topicCount} тем · mastery ${(courseAvg * 100).toInt()}%",
                             fontSize = 10.sp,
-                            color = if (srs != null && srs.dueAt <= now) Red else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    MasteryRing(
-                        progress = mastery,
-                        label = "${(mastery * 100).toInt()}%",
-                        sizeDp = 38,
-                        color = if (mastery >= 0.8f) Green else if (mastery >= 0.5f) Accent else Red
-                    )
+                    Text(if (courseOpen) "▾" else "▸", color = Accent)
                 }
+                if (courseOpen) {
+                    courseContent.sections.forEach { section ->
+                        val sectionOpen = expandedSections.contains(section.id)
+                        val sectionAvg = section.topics.map { snapshot?.mastery?.get(it.id) ?: 0.0 }
+                            .average().takeIf { !it.isNaN() } ?: 0.0
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    expandedSections = if (sectionOpen) expandedSections - section.id
+                                    else expandedSections + section.id
+                                }
+                                .padding(start = 8.dp, top = 8.dp, bottom = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(section.title, fontSize = 12.sp, color = Accent)
+                                Text(
+                                    "${section.topics.size} тем · ${(sectionAvg * 100).toInt()}%",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(if (sectionOpen) "▾" else "▸", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (sectionOpen) {
+                            section.topics.forEach { topic ->
+                                val mastery = (snapshot?.mastery?.get(topic.id) ?: 0.0).toFloat()
+                                val srs = snapshot?.srs?.get(topic.id)
+                                val dueText = when {
+                                    srs == null -> "не начато"
+                                    srs.dueAt <= now -> "к повторению"
+                                    else -> "через ${ceil((srs.dueAt - now).toDouble() / SpacedRepetition.DAY_MS).toInt()} дн."
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(topic.title, fontSize = 12.sp)
+                                        Text(
+                                            "$dueText · интервал ${srs?.intervalDays ?: 0} дн.",
+                                            fontSize = 9.sp,
+                                            color = if (srs != null && srs.dueAt <= now) Red
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    MasteryRing(
+                                        progress = mastery,
+                                        label = "${(mastery * 100).toInt()}%",
+                                        sizeDp = 34,
+                                        color = if (mastery >= 0.8f) Green else if (mastery >= 0.5f) Accent else Red
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
             }
         }
 

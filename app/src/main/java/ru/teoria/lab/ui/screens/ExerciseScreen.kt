@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import ru.teoria.lab.audio.Synth
+import ru.teoria.lab.audio.ThemePlayer
+import ru.teoria.lab.audio.Timbre
 import ru.teoria.lab.core.Chords
 import ru.teoria.lab.core.Guitar
 import ru.teoria.lab.core.Intervals
@@ -58,10 +60,11 @@ import ru.teoria.lab.ui.components.OptionState
 import ru.teoria.lab.ui.components.PianoKeyboard
 import ru.teoria.lab.ui.components.PrimaryButton
 import ru.teoria.lab.ui.components.SectionCard
+import ru.teoria.lab.ui.components.SelectChip
 import ru.teoria.lab.ui.components.StaffView
 
 @Composable
-fun ExerciseScreen(vm: AppViewModel, topicId: String, onBack: () -> Unit) {
+fun ExerciseScreen(vm: AppViewModel, topicId: String, onBack: () -> Unit, onOpenComposer: (String) -> Unit = {}) {
     val topic = Topics.byId(topicId)
     LaunchedEffect(topicId) { vm.startTopic(topic) }
     var showSummary by remember(topicId) { mutableStateOf(false) }
@@ -113,7 +116,7 @@ fun ExerciseScreen(vm: AppViewModel, topicId: String, onBack: () -> Unit) {
                 } else {
                     Text(q.prompt, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.height(14.dp))
-                    ExerciseBody(vm, q)
+                    ExerciseBody(vm, q, onOpenComposer)
                 }
             }
         }
@@ -196,7 +199,7 @@ private fun SessionSummary(vm: AppViewModel, onRestart: () -> Unit) {
 }
 
 @Composable
-private fun ExerciseBody(vm: AppViewModel, q: Question) {
+private fun ExerciseBody(vm: AppViewModel, q: Question, onOpenComposer: (String) -> Unit) {
     when (q) {
         is Question.FindNote -> FindNoteBody(vm, q)
         is Question.EarInterval -> EarIntervalBody(vm, q)
@@ -205,6 +208,7 @@ private fun ExerciseBody(vm: AppViewModel, q: Question) {
         is Question.KeySigns -> KeySignsBody(vm, q)
         is Question.RhythmTask -> RhythmBody(vm, q)
         is Question.Lit -> LitBody(vm, q)
+        is Question.Listen -> ListenBody(vm, q, onOpenComposer)
     }
 }
 
@@ -364,7 +368,7 @@ private fun VisualIntervalBody(vm: AppViewModel, q: Question.VisualInterval) {
 private fun ChordBody(vm: AppViewModel, q: Question.ChordEar) {
     LaunchedEffect(vm.questionKey) {
         delay(150)
-        Synth.playChord(Chords.midiNotes(q.root.midi, q.type), 1100)
+        Synth.playChord(Chords.midiFromOffsets(q.root.midi, q.offsets), 1100)
     }
     var selected by remember(vm.questionKey) { mutableStateOf<String?>(null) }
     Column {
@@ -383,7 +387,7 @@ private fun ChordBody(vm: AppViewModel, q: Question.ChordEar) {
                     color = Accent,
                     fontSize = 13.sp,
                     modifier = Modifier.clickable {
-                        Synth.playChord(Chords.midiNotes(q.root.midi, q.type), 1100)
+                        Synth.playChord(Chords.midiFromOffsets(q.root.midi, q.offsets), 1100)
                     }
                 )
             }
@@ -399,10 +403,11 @@ private fun ChordBody(vm: AppViewModel, q: Question.ChordEar) {
         if (vm.answered) {
             Spacer(Modifier.height(4.dp))
             SectionCard {
-                Text("${q.type}: ${Chords.offsets(q.type).joinToString("-")} полутонов", fontSize = 12.sp, color = Green)
+                Text("${q.type}: ${q.offsets.joinToString("-")} полутонов", fontSize = 12.sp, color = Green)
                 when (vm.instrument) {
                     "guitar" -> {
-                        val shape = Guitar.chordShape(q.root.midi, q.type)
+                        val shape = Chords.midiFromOffsets(q.root.midi, q.offsets)
+                            .mapNotNull { midi -> Guitar.positionsFor(midi).firstOrNull() }
                         if (shape.isNotEmpty()) {
                             Fretboard(
                                 openStrings = Guitar.OPEN.toList(),
@@ -423,12 +428,12 @@ private fun ChordBody(vm: AppViewModel, q: Question.ChordEar) {
                         PianoKeyboard(
                             startMidi = 60,
                             octaves = 2,
-                            highlight = Chords.midiNotes(q.root.midi, q.type).toSet(),
+                            highlight = Chords.midiFromOffsets(q.root.midi, q.offsets).toSet(),
                             enabled = false
                         ) { }
                     }
                     else -> {
-                        StaffView(notes = Chords.midiNotes(q.root.midi, q.type).map { ru.teoria.lab.core.Note.fromMidi(it) }, height = 170)
+                        StaffView(notes = Chords.midiFromOffsets(q.root.midi, q.offsets).map { ru.teoria.lab.core.Note.fromMidi(it) }, height = 170)
                     }
                 }
             }
@@ -476,7 +481,7 @@ private fun RhythmBody(vm: AppViewModel, q: Question.RhythmTask) {
         }
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("${q.bpm} уд/мин · ${q.beats} доли", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("${q.bpm} уд/мин · ${q.meter} · ${q.beats} доли", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             for (i in 0 until q.beats) {
@@ -561,6 +566,77 @@ private fun LitBody(vm: AppViewModel, q: Question.Lit) {
                 Text("Эпоха: ${q.card.epoch}", fontSize = 12.sp, color = Accent)
                 Text("Произведение: ${q.card.work}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Жанр: ${q.card.genre}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ListenBody(vm: AppViewModel, q: Question.Listen, onOpenComposer: (String) -> Unit) {
+    val theme = vm.themeById(q.themeId)
+    var selected by remember(vm.questionKey) { mutableStateOf<String?>(null) }
+    var timbre by remember(vm.questionKey) { mutableStateOf(Timbre.PIANO) }
+    var fragmentNotes by remember(vm.questionKey) { mutableStateOf(16) }
+    LaunchedEffect(vm.questionKey) {
+        if (theme != null && theme.notes.isNotEmpty()) {
+            delay(250)
+            ThemePlayer.play(theme, bpm = 100, timbre = timbre, maxNotes = fragmentNotes)
+        }
+    }
+    Column {
+        SectionCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        if (theme == null) "Тема недоступна" else "Тема · ${theme.notes.size} нот",
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        "синтез из нотных данных, не запись",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    "▶ ещё раз",
+                    color = Accent,
+                    fontSize = 13.sp,
+                    modifier = Modifier.clickable {
+                        theme?.let { ThemePlayer.play(it, bpm = 100, timbre = timbre, maxNotes = fragmentNotes) }
+                    }
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SelectChip("4 такта", fragmentNotes == 16, Modifier.weight(1f)) { fragmentNotes = 16 }
+                SelectChip("8 тактов", fragmentNotes == 32, Modifier.weight(1f)) { fragmentNotes = 32 }
+                SelectChip("струнные", timbre == Timbre.STRINGS, Modifier.weight(1f)) {
+                    timbre = if (timbre == Timbre.STRINGS) Timbre.PIANO else Timbre.STRINGS
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        q.options.forEach { option ->
+            OptionButton(option, enabled = !vm.answered, state = optionState(vm.answered, option, q.answer, selected)) {
+                selected = option
+                vm.submit(option == q.answer)
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+        if (vm.answered) {
+            Spacer(Modifier.height(4.dp))
+            SectionCard {
+                Text(q.work, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text(q.composer, fontSize = 12.sp, color = Accent)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SelectChip("▶ послушать ещё раз", false, Modifier.weight(1f)) {
+                        theme?.let { ThemePlayer.play(it, bpm = 100, timbre = timbre) }
+                    }
+                    SelectChip("В карточку композитора", false, Modifier.weight(1f)) {
+                        onOpenComposer(q.composer)
+                    }
+                }
             }
         }
     }

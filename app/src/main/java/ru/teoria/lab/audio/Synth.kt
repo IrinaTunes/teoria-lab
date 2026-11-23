@@ -36,6 +36,12 @@ object Synth {
         }
     }
 
+    /** Проигрывает готовый PCM-буфер (используется проигрывателем тем). */
+    fun playSamples(samples: ShortArray) {
+        if (samples.isEmpty()) return
+        executor.execute { playBuffer(samples) }
+    }
+
     /** Клик метронома. */
     fun click(accent: Boolean = false) {
         executor.execute {

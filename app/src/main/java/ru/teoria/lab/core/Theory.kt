@@ -206,11 +206,12 @@ data class MusicKey(
     val sharps: Int,
     val flats: Int,
     val pitchClass: Int,
-    val degree: Int
+    val degree: Int,
+    val minor: Boolean = false
 ) {
     val accidentals: Int get() = sharps - flats
     val signCount: Int get() = if (sharps > 0) sharps else flats
-    val nameRu: String get() = "$tonic мажор"
+    val nameRu: String get() = "$tonic ${if (minor) "минор" else "мажор"}"
     val signList: List<String> get() = if (sharps > 0) SHARP_ORDER.take(sharps) else FLAT_ORDER.take(flats)
     val hasSharps: Boolean get() = sharps > 0
 }
@@ -234,6 +235,27 @@ object Keys {
         MusicKey("соль-бемоль", "Gb", 0, 6, 6, 3),
         MusicKey("до-бемоль", "Cb", 0, 7, 11, 2)
     )
+
+    /** 15 минорных тональностей: ля минор и по 7 диезных/бемольных. */
+    val MINOR: List<MusicKey> = listOf(
+        MusicKey("ля", "Am", 0, 0, 9, 1, true),
+        MusicKey("ми", "Em", 1, 0, 4, 5, true),
+        MusicKey("си", "Bm", 2, 0, 11, 6, true),
+        MusicKey("фа-диез", "F#m", 3, 0, 6, 7, true),
+        MusicKey("до-диез", "C#m", 4, 0, 1, 8, true),
+        MusicKey("соль-диез", "G#m", 5, 0, 8, 2, true),
+        MusicKey("ре-диез", "D#m", 6, 0, 3, 3, true),
+        MusicKey("ля-диез", "A#m", 7, 0, 10, 4, true),
+        MusicKey("ре", "Dm", 0, 1, 2, 3, true),
+        MusicKey("соль", "Gm", 0, 2, 7, 2, true),
+        MusicKey("до", "Cm", 0, 3, 0, 1, true),
+        MusicKey("фа", "Fm", 0, 4, 5, 8, true),
+        MusicKey("си-бемоль", "Bbm", 0, 5, 10, 7, true),
+        MusicKey("ми-бемоль", "Ebm", 0, 6, 3, 6, true),
+        MusicKey("ля-бемоль", "Abm", 0, 7, 8, 5, true)
+    )
+
+    val ALL: List<MusicKey> get() = MAJOR + MINOR
 
     val SHARP_KEYS: List<MusicKey> = listOf("G", "D", "A", "E", "B", "F#", "C#").mapNotNull { l -> MAJOR.firstOrNull { it.latin == l } }
     val FLAT_KEYS: List<MusicKey> = listOf("F", "Bb", "Eb", "Ab", "Db", "Gb", "Cb").mapNotNull { l -> MAJOR.firstOrNull { it.latin == l } }
@@ -282,6 +304,8 @@ object Chords {
     }
 
     fun midiNotes(rootMidi: Int, type: String): List<Int> = offsets(type).map { rootMidi + it }
+
+    fun midiFromOffsets(rootMidi: Int, offsets: List<Int>): List<Int> = offsets.map { rootMidi + it }
 
     fun optionsFor(correct: String, seed: Long): List<String> {
         val rnd = kotlin.random.Random(seed)

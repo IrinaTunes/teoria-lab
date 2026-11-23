@@ -1,0 +1,467 @@
+{
+ "keys": [
+  {
+   "ru": "до",
+   "latin": "C",
+   "sharps": 0,
+   "flats": 0,
+   "minor": false
+  },
+  {
+   "ru": "соль",
+   "latin": "G",
+   "sharps": 1,
+   "flats": 0,
+   "minor": false
+  },
+  {
+   "ru": "ре",
+   "latin": "D",
+   "sharps": 2,
+   "flats": 0,
+   "minor": false
+  },
+  {
+   "ru": "ля",
+   "latin": "A",
+   "sharps": 3,
+   "flats": 0,
+   "minor": false
+  },
+  {
+   "ru": "ми",
+   "latin": "E",
+   "sharps": 4,
+   "flats": 0,
+   "minor": false
+  },
+  {
+   "ru": "си",
+   "latin": "B",
+   "sharps": 5,
+   "flats": 0,
+   "minor": false
+  },
+  {
+   "ru": "фа-диез",
+   "latin": "F#",
+   "sharps": 6,
+   "flats": 0,
+   "minor": false
+  },
+  {
+   "ru": "до-диез",
+   "latin": "C#",
+   "sharps": 7,
+   "flats": 0,
+   "minor": false
+  },
+  {
+   "ru": "фа",
+   "latin": "F",
+   "sharps": 0,
+   "flats": 1,
+   "minor": false
+  },
+  {
+   "ru": "си-бемоль",
+   "latin": "Bb",
+   "sharps": 0,
+   "flats": 2,
+   "minor": false
+  },
+  {
+   "ru": "ми-бемоль",
+   "latin": "Eb",
+   "sharps": 0,
+   "flats": 3,
+   "minor": false
+  },
+  {
+   "ru": "ля-бемоль",
+   "latin": "Ab",
+   "sharps": 0,
+   "flats": 4,
+   "minor": false
+  },
+  {
+   "ru": "ре-бемоль",
+   "latin": "Db",
+   "sharps": 0,
+   "flats": 5,
+   "minor": false
+  },
+  {
+   "ru": "соль-бемоль",
+   "latin": "Gb",
+   "sharps": 0,
+   "flats": 6,
+   "minor": false
+  },
+  {
+   "ru": "до-бемоль",
+   "latin": "Cb",
+   "sharps": 0,
+   "flats": 7,
+   "minor": false
+  },
+  {
+   "ru": "ля",
+   "latin": "Am",
+   "sharps": 0,
+   "flats": 0,
+   "minor": true
+  },
+  {
+   "ru": "ми",
+   "latin": "Em",
+   "sharps": 1,
+   "flats": 0,
+   "minor": true
+  },
+  {
+   "ru": "си",
+   "latin": "Bm",
+   "sharps": 2,
+   "flats": 0,
+   "minor": true
+  },
+  {
+   "ru": "фа-диез",
+   "latin": "F#m",
+   "sharps": 3,
+   "flats": 0,
+   "minor": true
+  },
+  {
+   "ru": "до-диез",
+   "latin": "C#m",
+   "sharps": 4,
+   "flats": 0,
+   "minor": true
+  },
+  {
+   "ru": "соль-диез",
+   "latin": "G#m",
+   "sharps": 5,
+   "flats": 0,
+   "minor": true
+  },
+  {
+   "ru": "ре-диез",
+   "latin": "D#m",
+   "sharps": 6,
+   "flats": 0,
+   "minor": true
+  },
+  {
+   "ru": "ля-диез",
+   "latin": "A#m",
+   "sharps": 7,
+   "flats": 0,
+   "minor": true
+  },
+  {
+   "ru": "ре",
+   "latin": "Dm",
+   "sharps": 0,
+   "flats": 1,
+   "minor": true
+  },
+  {
+   "ru": "соль",
+   "latin": "Gm",
+   "sharps": 0,
+   "flats": 2,
+   "minor": true
+  },
+  {
+   "ru": "до",
+   "latin": "Cm",
+   "sharps": 0,
+   "flats": 3,
+   "minor": true
+  },
+  {
+   "ru": "фа",
+   "latin": "Fm",
+   "sharps": 0,
+   "flats": 4,
+   "minor": true
+  },
+  {
+   "ru": "си-бемоль",
+   "latin": "Bbm",
+   "sharps": 0,
+   "flats": 5,
+   "minor": true
+  },
+  {
+   "ru": "ми-бемоль",
+   "latin": "Ebm",
+   "sharps": 0,
+   "flats": 6,
+   "minor": true
+  },
+  {
+   "ru": "ля-бемоль",
+   "latin": "Abm",
+   "sharps": 0,
+   "flats": 7,
+   "minor": true
+  }
+ ],
+ "intervals": [
+  {
+   "name": "ч1",
+   "semitones": 0,
+   "title": "чистая прима"
+  },
+  {
+   "name": "м2",
+   "semitones": 1,
+   "title": "малая секунда"
+  },
+  {
+   "name": "б2",
+   "semitones": 2,
+   "title": "большая секунда"
+  },
+  {
+   "name": "м3",
+   "semitones": 3,
+   "title": "малая терция"
+  },
+  {
+   "name": "б3",
+   "semitones": 4,
+   "title": "большая терция"
+  },
+  {
+   "name": "ч4",
+   "semitones": 5,
+   "title": "чистая кварта"
+  },
+  {
+   "name": "тритон",
+   "semitones": 6,
+   "title": "тритон"
+  },
+  {
+   "name": "ч5",
+   "semitones": 7,
+   "title": "чистая квинта"
+  },
+  {
+   "name": "м6",
+   "semitones": 8,
+   "title": "малая секста"
+  },
+  {
+   "name": "б6",
+   "semitones": 9,
+   "title": "большая секста"
+  },
+  {
+   "name": "м7",
+   "semitones": 10,
+   "title": "малая септима"
+  },
+  {
+   "name": "б7",
+   "semitones": 11,
+   "title": "большая септима"
+  },
+  {
+   "name": "ч8",
+   "semitones": 12,
+   "title": "чистая октава"
+  },
+  {
+   "name": "м9",
+   "semitones": 13,
+   "title": "малая нона"
+  },
+  {
+   "name": "б9",
+   "semitones": 14,
+   "title": "большая нона"
+  },
+  {
+   "name": "м10",
+   "semitones": 15,
+   "title": "малая децима"
+  },
+  {
+   "name": "б10",
+   "semitones": 16,
+   "title": "большая децима"
+  },
+  {
+   "name": "ч11",
+   "semitones": 17,
+   "title": "чистая ундецима"
+  },
+  {
+   "name": "ч12",
+   "semitones": 19,
+   "title": "чистая дуодецима"
+  },
+  {
+   "name": "м13",
+   "semitones": 20,
+   "title": "малая терцдецима"
+  },
+  {
+   "name": "б13",
+   "semitones": 21,
+   "title": "большая терцдецима"
+  }
+ ],
+ "directions": [
+  "вверх",
+  "вниз"
+ ],
+ "simple_interval_count": 13,
+ "triads": [
+  {
+   "name": "мажорное трезвучие",
+   "offsets": [
+    0,
+    4,
+    7
+   ]
+  },
+  {
+   "name": "минорное трезвучие",
+   "offsets": [
+    0,
+    3,
+    7
+   ]
+  },
+  {
+   "name": "уменьшённое трезвучие",
+   "offsets": [
+    0,
+    3,
+    6
+   ]
+  },
+  {
+   "name": "увеличенное трезвучие",
+   "offsets": [
+    0,
+    4,
+    8
+   ]
+  }
+ ],
+ "sevenths": [
+  {
+   "name": "D7",
+   "offsets": [
+    0,
+    4,
+    7,
+    10
+   ],
+   "title": "доминантсептаккорд"
+  },
+  {
+   "name": "D65",
+   "offsets": [
+    0,
+    3,
+    6,
+    8
+   ],
+   "title": "доминантсекстаккорд (первое обращение D7)"
+  },
+  {
+   "name": "D43",
+   "offsets": [
+    0,
+    3,
+    5,
+    8
+   ],
+   "title": "доминанттерцквартаккорд (второе обращение D7)"
+  },
+  {
+   "name": "D2",
+   "offsets": [
+    0,
+    2,
+    5,
+    9
+   ],
+   "title": "доминантсекундаккорд (третье обращение D7)"
+  },
+  {
+   "name": "SII7",
+   "offsets": [
+    0,
+    3,
+    7,
+    10
+   ],
+   "title": "субдоминантовый септаккорд II ступени"
+  },
+  {
+   "name": "VII7",
+   "offsets": [
+    0,
+    3,
+    6,
+    10
+   ],
+   "title": "вводный септаккорд (малый уменьшённый)"
+  },
+  {
+   "name": "умVII7",
+   "offsets": [
+    0,
+    3,
+    6,
+    9
+   ],
+   "title": "уменьшённый вводный септаккорд"
+  }
+ ],
+ "meters": [
+  "2/4",
+  "3/4",
+  "4/4",
+  "6/8",
+  "9/8",
+  "12/8",
+  "5/4",
+  "7/8"
+ ],
+ "rhythm_values": [
+  "целая",
+  "половинная",
+  "четверть",
+  "восьмая",
+  "шестнадцатая",
+  "тридцатьвторая",
+  "шестьдесятчетвёртая"
+ ],
+ "beats": [
+  2,
+  3,
+  4
+ ],
+ "tempos": [
+  60,
+  72,
+  80,
+  90,
+  100,
+  110,
+  120,
+  132
+ ],
+ "default_session": 8
+}

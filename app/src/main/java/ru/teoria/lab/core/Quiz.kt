@@ -1,64 +1,12 @@
 package ru.teoria.lab.core
 
-enum class Course(val id: String, val title: String) {
-    SOLFEGGIO("solfeggio", "Сольфеджио"),
-    THEORY("theory", "Теория"),
-    LITERATURE("literature", "Музлитература");
-
-    companion object {
-        fun byId(id: String): Course = values().firstOrNull { it.id == id } ?: SOLFEGGIO
-    }
-}
-
-enum class ExerciseKind(val title: String) {
-    FIND_NOTE("Найди ноту"),
-    EAR_INTERVAL("Интервал на слух"),
-    VISUAL_INTERVAL("Интервал по нотам"),
-    CHORD_EAR("Аккорд на слух"),
-    KEY_SIGNS("Тональность и ключевые знаки"),
-    RHYTHM("Ритм и метроном"),
-    LITERATURE("Карточки музлитературы")
-}
-
-data class TopicDef(
-    val id: String,
-    val course: Course,
-    val title: String,
-    val subtitle: String,
-    val kind: ExerciseKind
-)
-
-object Topics {
-    val ALL: List<TopicDef> = listOf(
-        // Сольфеджио
-        TopicDef("solf-notes", Course.SOLFEGGIO, "Ноты и октавы", "Названия нот, октавы, диезы и бемоли", ExerciseKind.FIND_NOTE),
-        TopicDef("solf-ear", Course.SOLFEGGIO, "Интервалы на слух", "Две ноты — определи интервал", ExerciseKind.EAR_INTERVAL),
-        TopicDef("solf-visual", Course.SOLFEGGIO, "Интервалы по нотам", "Две ноты на нотоносце", ExerciseKind.VISUAL_INTERVAL),
-        TopicDef("solf-rhythm", Course.SOLFEGGIO, "Ритм и метроном", "Попади в долю с допуском ±120 мс", ExerciseKind.RHYTHM),
-        // Теория
-        TopicDef("theory-sharps", Course.THEORY, "Диезные тональности", "Порядок диезов: фа до соль ре ля ми си", ExerciseKind.KEY_SIGNS),
-        TopicDef("theory-flats", Course.THEORY, "Бемольные тональности", "Порядок бемолей — обратный", ExerciseKind.KEY_SIGNS),
-        TopicDef("theory-chords", Course.THEORY, "Аккорды", "Мажор, минор, уменьшённый, увеличенный", ExerciseKind.CHORD_EAR),
-        TopicDef("theory-degrees", Course.THEORY, "Ступени и лад", "I–VII в мажоре, тоника и устойчивость", ExerciseKind.FIND_NOTE),
-        // Музлитература
-        TopicDef("lit-epoch", Course.LITERATURE, "Композитор и эпоха", "Барокко, классицизм, романтизм, XX век", ExerciseKind.LITERATURE),
-        TopicDef("lit-stage", Course.LITERATURE, "Опера и балет", "Кто автор сценического произведения", ExerciseKind.LITERATURE),
-        TopicDef("lit-works", Course.LITERATURE, "Композитор и произведение", "Что написал этот композитор", ExerciseKind.LITERATURE),
-        TopicDef("lit-russian", Course.LITERATURE, "Русская и советская музыка", "Чайковский, Мусоргский, Прокофьев, Шостакович", ExerciseKind.LITERATURE)
-    )
-
-    fun byId(id: String): TopicDef = ALL.firstOrNull { it.id == id } ?: ALL[0]
-    fun byCourse(course: Course): List<TopicDef> = ALL.filter { it.course == course }
-    fun topicsCount(): Int = ALL.size
-}
-
 sealed class Question {
     abstract val kind: ExerciseKind
     abstract val prompt: String
 
     data class FindNote(
         val target: Note,
-        val options: List<Note>
+        val options: List<Note> = emptyList()
     ) : Question() {
         override val kind: ExerciseKind get() = ExerciseKind.FIND_NOTE
         override val prompt: String get() = "Найди ноту: ${target.nameRu} ${octaveRu(target.octave)}"
@@ -68,7 +16,8 @@ sealed class Question {
         val low: Note,
         val high: Note,
         val answer: String,
-        val options: List<String>
+        val options: List<String>,
+        val direction: String = "вверх"
     ) : Question() {
         override val kind: ExerciseKind get() = ExerciseKind.EAR_INTERVAL
         override val prompt: String get() = "Послушай две ноты и определи интервал"
@@ -87,10 +36,12 @@ sealed class Question {
     data class ChordEar(
         val root: Note,
         val type: String,
+        val title: String,
+        val offsets: List<Int>,
         val options: List<String>
     ) : Question() {
         override val kind: ExerciseKind get() = ExerciseKind.CHORD_EAR
-        override val prompt: String get() = "Определи тип аккорда на слух"
+        override val prompt: String get() = "Определи аккорд на слух"
     }
 
     data class KeySigns(
@@ -102,18 +53,18 @@ sealed class Question {
         override val prompt: String get() = if (askCount) {
             "Сколько знаков в тональности ${key.nameRu}?"
         } else {
-            val label = signLabel(key.signCount, key.hasSharps, genitive = true)
-            "В какой тональности $label?"
+            val mode = if (key.minor) "минорной" else "мажорной"
+            "В какой $mode тональности ${signLabel(key.signCount, key.hasSharps)}?"
         }
     }
 
     data class RhythmTask(
         val bpm: Int,
         val beats: Int,
-        val pattern: List<Int>
+        val meter: String
     ) : Question() {
         override val kind: ExerciseKind get() = ExerciseKind.RHYTHM
-        override val prompt: String get() = "Повтори ритм: ${beats} доли при $bpm уд/мин"
+        override val prompt: String get() = "Повтори ритм: $beats доли при $bpm уд/мин"
     }
 
     data class Lit(
@@ -125,6 +76,22 @@ sealed class Question {
     ) : Question() {
         override val kind: ExerciseKind get() = ExerciseKind.LITERATURE
         override val prompt: String get() = promptText
+    }
+
+    data class Listen(
+        val themeId: String,
+        val mode: String,
+        val answer: String,
+        val options: List<String>,
+        val composer: String,
+        val work: String
+    ) : Question() {
+        override val kind: ExerciseKind get() = ExerciseKind.LISTEN
+        override val prompt: String get() = if (mode == "composer") {
+            "Звучит тема — кто её автор?"
+        } else {
+            "Звучит тема — что это за произведение?"
+        }
     }
 }
 
@@ -139,8 +106,19 @@ fun signLabel(count: Int, sharps: Boolean, genitive: Boolean = false): String {
     return "$count $plural"
 }
 
+fun keyFromSpec(spec: KeySpec): MusicKey {
+    val letter = LETTER_LATIN.indexOfFirst { it.equals(spec.latin.take(1), ignoreCase = true) }
+    val acc = when {
+        spec.latin.contains("#") -> 1
+        spec.latin.contains("b") -> -1
+        else -> 0
+    }
+    val pc = if (letter >= 0) (LETTER_SEMITONES[letter] + acc + 12) % 12 else 0
+    return MusicKey(spec.ru, spec.latin, spec.sharps, spec.flats, pc, 1, spec.minor)
+}
+
 object QuizGenerator {
-    /** MIDI-диапазон, доступный на выбранном инструменте. */
+
     fun rangeFor(instrumentId: String): IntRange = when (instrumentId) {
         "guitar" -> 40..76
         "violin" -> 55..83
@@ -148,7 +126,6 @@ object QuizGenerator {
         else -> 60..83
     }
 
-    /** Ноты, реально исполнимые на инструменте. */
     fun playableMidi(instrumentId: String): List<Int> {
         val range = rangeFor(instrumentId)
         return when (instrumentId) {
@@ -161,139 +138,203 @@ object QuizGenerator {
     fun generate(topic: TopicDef, seed: Long, instrumentId: String): Question {
         val rnd = kotlin.random.Random(seed * 31 + topic.id.hashCode())
         return when (topic.kind) {
-            ExerciseKind.FIND_NOTE -> findNote(topic, seed, rnd, instrumentId)
-            ExerciseKind.EAR_INTERVAL -> earInterval(rnd)
-            ExerciseKind.VISUAL_INTERVAL -> visualInterval(rnd)
-            ExerciseKind.CHORD_EAR -> chordEar(rnd)
-            ExerciseKind.KEY_SIGNS -> keySigns(topic, rnd)
+            ExerciseKind.FIND_NOTE -> findNote(rnd, instrumentId)
+            ExerciseKind.EAR_INTERVAL -> intervalQuestion(rnd, visual = false)
+            ExerciseKind.VISUAL_INTERVAL -> intervalQuestion(rnd, visual = true)
+            ExerciseKind.CHORD_EAR -> chordQuestion(rnd)
+            ExerciseKind.KEY_SIGNS -> keySigns(rnd, topic)
             ExerciseKind.RHYTHM -> rhythm(rnd)
-            ExerciseKind.LITERATURE -> literature(topic, rnd)
+            ExerciseKind.LITERATURE -> literature(rnd, topic)
+            ExerciseKind.LISTEN -> listen(rnd, topic)
         }
     }
 
-    private fun findNote(topic: TopicDef, seed: Long, rnd: kotlin.random.Random, instrumentId: String): Question.FindNote {
+    // ---------- нота ----------
+    fun findNote(rnd: kotlin.random.Random, instrumentId: String): Question.FindNote {
         val pool = playableMidi(instrumentId)
         val midi = pool[rnd.nextInt(pool.size)]
-        // Название всегда соответствует точной высоте: «до-диез», «си-бемоль» и т. д.
-        val target = Note.fromMidi(midi)
-        return Question.FindNote(target, emptyList())
+        return Question.FindNote(Note.fromMidi(midi))
     }
 
-    private fun randomIntervalName(rnd: kotlin.random.Random): String {
-        val simple = listOf("м2", "б2", "м3", "б3", "ч4", "ч5", "м6", "б6", "м7", "б7", "ч8")
-        return if (rnd.nextInt(6) == 0) "тритон" else simple[rnd.nextInt(simple.size)]
-    }
-
-    private fun earInterval(rnd: kotlin.random.Random): Question.EarInterval {
-        val name = randomIntervalName(rnd)
-        val pair = Intervals.EXAMPLES.getValue(name).let { it[rnd.nextInt(it.size)] }
-        return Question.EarInterval(pair.first, pair.second, name, Intervals.optionsFor(name, rnd.nextLong()))
-    }
-
-    private fun visualInterval(rnd: kotlin.random.Random): Question.VisualInterval {
-        val name = randomIntervalName(rnd)
-        val pair = Intervals.EXAMPLES.getValue(name).let { it[rnd.nextInt(it.size)] }
-        return Question.VisualInterval(pair.first, pair.second, name, Intervals.optionsFor(name, rnd.nextLong()))
-    }
-
-    private fun chordEar(rnd: kotlin.random.Random): Question.ChordEar {
-        val type = Chords.TYPES[rnd.nextInt(Chords.TYPES.size)]
-        val rootMidi = 55 + rnd.nextInt(8)
-        val root = Note.fromMidi(rootMidi)
-        return Question.ChordEar(root, type, Chords.optionsFor(type, rnd.nextLong()))
-    }
-
-    private fun keySigns(topic: TopicDef, rnd: kotlin.random.Random): Question.KeySigns {
-        val sharpOnly = topic.id == "theory-sharps"
-        val flatOnly = topic.id == "theory-flats"
-        val pool = when {
-            sharpOnly -> Keys.MAJOR.filter { it.sharps > 0 }
-            flatOnly -> Keys.MAJOR.filter { it.flats > 0 }
-            else -> Keys.MAJOR
+    // ---------- интервалы ----------
+    fun intervalQuestion(rnd: kotlin.random.Random, visual: Boolean): Question {
+        val specs = ContentRepo.generators().intervals.ifEmpty {
+            Intervals.BY_SEMITONES.map { (s, n) -> IntervalSpec(n, s, Intervals.titleOf(n)) }
         }
+        val spec = specs[rnd.nextInt(specs.size)]
+        val direction = if (rnd.nextBoolean()) "вверх" else "вниз"
+        val highMidi = (48 + spec.semitones).coerceAtMost(88)
+        val lowMidi = highMidi - spec.semitones
+        val low = Note.fromMidi(lowMidi)
+        val high = Note.fromMidi(highMidi)
+        val options = fourOptions(specs.map { it.name }, spec.name, rnd)
+        return if (visual) {
+            Question.VisualInterval(low, high, spec.name, options)
+        } else {
+            Question.EarInterval(low, high, spec.name, options, direction)
+        }
+    }
+
+    // ---------- аккорды ----------
+    fun chordQuestion(rnd: kotlin.random.Random): Question.ChordEar {
+        val specs = ContentRepo.generators().chords.ifEmpty {
+            Chords.TYPES.map { ChordSpec(it, Chords.offsets(it), it) }
+        }
+        val spec = specs[rnd.nextInt(specs.size)]
+        val rootMidi = 52 + rnd.nextInt(10)
+        val root = Note.fromMidi(rootMidi)
+        return Question.ChordEar(
+            root, spec.name, spec.title, spec.offsets,
+            fourOptions(specs.map { it.name }, spec.name, rnd)
+        )
+    }
+
+    // ---------- тональности ----------
+    fun keySigns(rnd: kotlin.random.Random, topic: TopicDef): Question.KeySigns {
+        val configKeys = ContentRepo.generators().keys
+        val allKeys: List<MusicKey> = if (configKeys.isEmpty()) Keys.ALL else configKeys.map { keyFromSpec(it) }
+        val pool = when (topic.filter["mode"]) {
+            "sharp" -> allKeys.filter { it.sharps > 0 }
+            "flat" -> allKeys.filter { it.flats > 0 }
+            "minor" -> allKeys.filter { it.minor }
+            "major" -> allKeys.filter { !it.minor }
+            else -> allKeys
+        }.ifEmpty { allKeys }
         val key = pool[rnd.nextInt(pool.size)]
-        val askCount = rnd.nextInt(100) < 55 || sharpOnly || flatOnly
-        if (askCount) {
+        val askCount = rnd.nextInt(100) < 55
+        return if (askCount) {
             val correct = signLabel(key.signCount, key.hasSharps)
             val universe = (0..7)
                 .flatMap { listOf(signLabel(it, true), signLabel(it, false)) }
                 .distinct()
                 .filter { it != correct }
             val options = (listOf(correct) + universe.shuffled(rnd).take(3)).toMutableList()
-            shuffle(options, rnd)
-            return Question.KeySigns(key, true, options)
+            options.shuffleInPlace(rnd)
+            Question.KeySigns(key, true, options)
+        } else {
+            val correct = key.nameRu
+            val others = allKeys.filter { it.minor == key.minor && it.latin != key.latin }
+                .shuffled(rnd).take(3).map { it.nameRu }
+            val options = (listOf(correct) + others).toMutableList()
+            options.shuffleInPlace(rnd)
+            Question.KeySigns(key, false, options)
         }
-        val correct = key.nameRu
-        val others = Keys.MAJOR.filter { it.tonic != key.tonic }.shuffled(rnd).take(3).map { it.nameRu }
-        val options = (listOf(correct) + others).toMutableList()
-        shuffle(options, rnd)
-        return Question.KeySigns(key, false, options)
     }
 
-    private fun rhythm(rnd: kotlin.random.Random): Question.RhythmTask {
-        val bpm = listOf(80, 90, 100, 110)[rnd.nextInt(4)]
-        val beats = 4
-        val pattern = (0 until beats).map { 1 }
-        return Question.RhythmTask(bpm, beats, pattern)
+    // ---------- ритм ----------
+    fun rhythm(rnd: kotlin.random.Random): Question.RhythmTask {
+        val g = ContentRepo.generators()
+        val tempos = g.tempos.ifEmpty { listOf(80, 90, 100, 110) }
+        val meters = g.meters.ifEmpty { listOf("2/4", "3/4", "4/4", "6/8") }
+        val meter = meters[rnd.nextInt(meters.size)]
+        val beats = meter.substringBefore('/').toIntOrNull()?.coerceIn(2, 6) ?: 4
+        return Question.RhythmTask(tempos[rnd.nextInt(tempos.size)], beats, meter)
     }
 
-    private fun literature(topic: TopicDef, rnd: kotlin.random.Random): Question.Lit {
-        return when (topic.id) {
-            "lit-epoch" -> {
-                val card = Literature.CARDS[rnd.nextInt(Literature.CARDS.size)]
-                val epoch = card.epoch
-                val others = Literature.EPOCHS.filter { it != epoch }.shuffled(rnd).take(3)
-                val options = (listOf(epoch) + others).toMutableList()
-                shuffle(options, rnd)
-                Question.Lit(
-                    "В какую эпоху творил ${card.composer}?",
-                    epoch, options, card, "epoch"
-                )
-            }
-            "lit-stage" -> {
-                val pool = Literature.stageWorks()
-                val card = pool[rnd.nextInt(pool.size)]
-                val answer = card.composer
-                val others = Literature.composers().filter { it != answer }.shuffled(rnd).take(3)
-                val options = (listOf(answer) + others).toMutableList()
-                shuffle(options, rnd)
-                Question.Lit("Кто автор «${card.work}»?", answer, options, card, "work")
-            }
-            "lit-russian" -> {
-                val pool = Literature.russianWorks()
-                val card = pool[rnd.nextInt(pool.size)]
-                if (rnd.nextBoolean()) {
-                    val answer = card.epoch
-                    val others = Literature.EPOCHS.filter { it != answer }.shuffled(rnd).take(3)
-                    val options = (listOf(answer) + others).toMutableList()
-                    shuffle(options, rnd)
-                    Question.Lit("Какой эпохе близко творчество ${card.composer}?", answer, options, card, "epoch")
-                } else {
-                    val answer = card.composer
-                    val others = Literature.russianWorks().map { it.composer }.distinct()
-                        .filter { it != answer }.shuffled(rnd).take(3)
-                    val options = (listOf(answer) + others).toMutableList()
-                    shuffle(options, rnd)
-                    Question.Lit("Кто автор «${card.work}»?", answer, options, card, "work")
+    // ---------- музлитература ----------
+    fun cardsFor(topic: TopicDef): List<LitCard> {
+        val filtered = ContentRepo.cards().filter { card ->
+            topic.filter.all { (key, value) ->
+                when (key) {
+                    "composer" -> card.composer == value
+                    "epoch" -> card.epoch == value
+                    "genre" -> card.genre == value
+                    "work" -> card.work == value
+                    else -> true
                 }
             }
-            else -> {
-                val card = Literature.CARDS[rnd.nextInt(Literature.CARDS.size)]
+        }
+        return filtered.ifEmpty { ContentRepo.cards() }
+    }
+
+    fun literature(rnd: kotlin.random.Random, topic: TopicDef): Question.Lit {
+        val cards = cardsFor(topic)
+        if (cards.isEmpty()) {
+            return Question.Lit("Нет карточек", "", emptyList(), LitCard(0, "", "", "", ""), "none")
+        }
+        val filterEpoch = topic.filter["epoch"]
+        val filterGenre = topic.filter["genre"]
+        val filterComposer = topic.filter["composer"]
+        val mode = when {
+            filterEpoch != null -> "epochComposer"
+            filterGenre != null -> "work"
+            filterComposer != null -> "composer"
+            else -> listOf("epoch", "work", "composer")[rnd.nextInt(3)]
+        }
+        return when (mode) {
+            "epochComposer" -> {
+                val card = cards[rnd.nextInt(cards.size)]
+                val answer = card.composer
+                val others = ContentRepo.cards().filter { it.epoch != card.epoch }
+                    .map { it.composer }.distinct().shuffled(rnd).take(3)
+                val options = (listOf(answer) + others).toMutableList().also { it.shuffleInPlace(rnd) }
+                Question.Lit("Кто из композиторов — представитель эпохи «${card.epoch}»?", answer, options, card, "epoch")
+            }
+            "epoch" -> {
+                val card = cards[rnd.nextInt(cards.size)]
+                val answer = card.epoch
+                val others = ContentRepo.cards().map { it.epoch }.distinct()
+                    .filter { it != answer }.shuffled(rnd).take(3)
+                val options = (listOf(answer) + others).toMutableList().also { it.shuffleInPlace(rnd) }
+                Question.Lit("В какую эпоху творил ${card.composer}?", answer, options, card, "epoch")
+            }
+            "composer" -> {
+                val card = cards[rnd.nextInt(cards.size)]
                 val answer = card.work
-                val others = Literature.CARDS.filter { it.work != answer }.shuffled(rnd).take(3).map { it.work }
-                val options = (listOf(answer) + others).toMutableList()
-                shuffle(options, rnd)
+                val others = ContentRepo.cards().filter { it.composer != card.composer }
+                    .shuffled(rnd).take(3).map { it.work }
+                val options = (listOf(answer) + others).toMutableList().also { it.shuffleInPlace(rnd) }
                 Question.Lit("Какое произведение написал ${card.composer}?", answer, options, card, "composer")
+            }
+            else -> {
+                val card = cards[rnd.nextInt(cards.size)]
+                val answer = card.composer
+                val others = ContentRepo.cards().map { it.composer }.distinct()
+                    .filter { it != answer }.shuffled(rnd).take(3)
+                val options = (listOf(answer) + others).toMutableList().also { it.shuffleInPlace(rnd) }
+                Question.Lit("Кто автор «${card.work}»?", answer, options, card, "work")
             }
         }
     }
 
-    private fun <T> shuffle(list: MutableList<T>, rnd: kotlin.random.Random) {
-        for (i in list.size - 1 downTo 1) {
+    // ---------- угадай мелодию ----------
+    fun listen(rnd: kotlin.random.Random, topic: TopicDef): Question.Listen {
+        val themes = ThemeRepo.all()
+        if (themes.isEmpty()) {
+            return Question.Listen("", "composer", "", emptyList(), "", "")
+        }
+        val theme = themes[rnd.nextInt(themes.size)]
+        val mode = topic.filter["mode"] ?: if (rnd.nextBoolean()) "composer" else "work"
+        return if (mode == "work") {
+            val answer = theme.work
+            val others = themes.filter { it.work != answer }.map { it.work }.distinct()
+                .shuffled(rnd).take(3)
+            val options = (listOf(answer) + others).toMutableList().also { it.shuffleInPlace(rnd) }
+            Question.Listen(theme.id, "work", answer, options, theme.composer, theme.work)
+        } else {
+            val answer = theme.composer
+            val others = ThemeRepo.composers().filter { it != answer }.shuffled(rnd).take(3)
+            val options = (listOf(answer) + others).toMutableList().also { it.shuffleInPlace(rnd) }
+            Question.Listen(theme.id, "composer", answer, options, theme.composer, theme.work)
+        }
+    }
+
+    /** Четыре различных варианта, среди них обязательно правильный. */
+    fun fourOptions(pool: List<String>, correct: String, rnd: kotlin.random.Random): List<String> {
+        val distinct = pool.distinct()
+        val others = distinct.filter { it != correct }.shuffled(rnd).take(3)
+        val options = (listOf(correct) + others).toMutableList()
+        while (options.size < 4) options.add("—")
+        options.shuffleInPlace(rnd)
+        return options
+    }
+
+    private fun MutableList<String>.shuffleInPlace(rnd: kotlin.random.Random) {
+        for (i in size - 1 downTo 1) {
             val j = rnd.nextInt(0, i + 1)
-            val tmp = list[i]
-            list[i] = list[j]
-            list[j] = tmp
+            val tmp = this[i]
+            this[i] = this[j]
+            this[j] = tmp
         }
     }
 }
@@ -303,12 +344,13 @@ fun Question.correctLabel(): String = when (this) {
     is Question.FindNote -> target.fullRu
     is Question.EarInterval -> "$answer — ${Intervals.titleOf(answer)}"
     is Question.VisualInterval -> "$answer — ${Intervals.titleOf(answer)}"
-    is Question.ChordEar -> type
+    is Question.ChordEar -> "$type — $title"
     is Question.KeySigns -> if (askCount) {
         signLabel(key.signCount, key.hasSharps)
     } else {
         "${key.nameRu} — ${signLabel(key.signCount, key.hasSharps, genitive = true)}"
     }
-    is Question.RhythmTask -> "$beats доли при $bpm уд/мин"
+    is Question.RhythmTask -> "$beats доли, $meter, $bpm уд/мин"
     is Question.Lit -> answer
+    is Question.Listen -> if (mode == "composer") composer else work
 }

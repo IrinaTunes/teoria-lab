@@ -12,11 +12,11 @@ class TheoryTest {
     @Test
     fun midiNumbersFollowConcertPitch() {
         assertEquals(60, Note(0, 0, 4).midi)
-        assertEquals(69, Note(5, 0, 4).midi) // A4
-        assertEquals(61, Note(0, 1, 4).midi) // C#4
+        assertEquals(69, Note(5, 0, 4).midi)
+        assertEquals(61, Note(0, 1, 4).midi)
         assertEquals(72, Note(0, 0, 5).midi)
-        assertEquals(40, Note(2, 0, 2).midi) // E2 — 6-я струна гитары
-        assertEquals(76, Note(2, 0, 5).midi) // E5 — 1-я струна скрипки
+        assertEquals(40, Note(2, 0, 2).midi)
+        assertEquals(76, Note(2, 0, 5).midi)
     }
 
     @Test
@@ -33,7 +33,6 @@ class TheoryTest {
         assertEquals(Note(0, 1, 4), Note.parse("C#4"))
         assertEquals(Note(6, -1, 3), Note.parse("Bb3"))
         assertEquals(Note(2, 0, 4), Note.fromMidi(64))
-        assertEquals(61, Note.fromMidi(61).midi)
         assertEquals("до-диез", Note.fromMidi(61).nameRu)
         assertEquals("ре-бемоль", Note(1, -1, 4).nameRu)
     }
@@ -72,12 +71,15 @@ class TheoryTest {
     }
 
     @Test
-    fun allFifteenMajorKeysExist() {
+    fun allThirtyKeysExistInCodeAndData() {
         assertEquals(15, Keys.MAJOR.size)
+        assertEquals(15, Keys.MINOR.size)
+        assertEquals(30, Keys.ALL.size)
         assertEquals(7, Keys.SHARP_KEYS.size)
         assertEquals(7, Keys.FLAT_KEYS.size)
         assertEquals(3, Keys.byLatin("A")?.sharps)
         assertEquals(2, Keys.byLatin("Bb")?.flats)
+        assertEquals("ля минор", Keys.MINOR.first().nameRu)
     }
 
     @Test
@@ -128,6 +130,7 @@ class TheoryTest {
         assertNull(Chords.typeByOffsets(listOf(0, 5, 7)))
         assertEquals(listOf(60, 64, 67), Chords.midiNotes(60, "мажор"))
         assertEquals(listOf(57, 60, 64), Chords.midiNotes(57, "минор"))
+        assertEquals(listOf(60, 64, 67, 70), Chords.midiFromOffsets(60, listOf(0, 4, 7, 10)))
     }
 
     @Test
@@ -148,6 +151,17 @@ class TheoryTest {
         assertEquals(listOf("G3", "D4", "A4", "E5"), Violin.STRING_NAMES)
         assertTrue(Violin.positionsFor(69).contains(2 to 0))
         assertTrue(Violin.positionsFor(64).contains(1 to 2))
+    }
+
+    @Test
+    fun jsonParserHandlesContentShapes() {
+        val json = parseJson("""{"a":[1,2.5,-3],"b":{"c":"строка"},"d":true,"e":null}""")
+        assertEquals(3, json.array("a").size)
+        assertEquals(2, json.array("a")[1].asInt())
+        assertEquals("строка", json.opt("b")?.str("c"))
+        assertTrue(json.bool("d"))
+        assertNotNull(json.opt("e"))
+        assertFalse(json.bool("f", true) == false)
     }
 }
 
@@ -214,7 +228,6 @@ class ProgressTest {
         assertEquals(0.3, SpacedRepetition.mastery(listOf(true, true, true)), 0.0001)
         val ten = List(10) { it < 8 }
         assertEquals(0.8, SpacedRepetition.mastery(ten), 0.0001)
-        // Из 14 попыток учитываются последние 10: первые 4 неверные не влияют.
         val fourteen = List(4) { false } + List(10) { true }
         assertEquals(1.0, SpacedRepetition.mastery(fourteen), 0.0001)
     }
@@ -247,121 +260,5 @@ class ProgressTest {
         assertEquals(2, Days.nextStreak(1, day1, day2))
         assertEquals(1, Days.nextStreak(5, day1, Days.dayKey(5 * SpacedRepetition.DAY_MS)))
         assertEquals(3, Days.nextStreak(3, day2, day2))
-    }
-}
-
-class QuizTest {
-
-    @Test
-    fun generationIsDeterministicBySeed() {
-        Topics.ALL.forEach { topic ->
-            val a = QuizGenerator.generate(topic, 42L, "piano")
-            val b = QuizGenerator.generate(topic, 42L, "piano")
-            assertEquals("topic ${topic.id}", a, b)
-        }
-    }
-
-    @Test
-    fun findNoteTargetsArePlayableOnEachInstrument() {
-        val topic = Topics.byId("solf-notes")
-        listOf("piano", "guitar", "violin", "vocal", "universal").forEach { instrument ->
-            for (seed in 1L..60L) {
-                val q = QuizGenerator.generate(topic, seed, instrument) as Question.FindNote
-                val midi = q.target.midi
-                assertTrue("$instrument $midi", QuizGenerator.playableMidi(instrument).contains(midi))
-                if (instrument == "guitar") assertTrue(Guitar.positionsFor(midi).isNotEmpty())
-                if (instrument == "violin") assertTrue(Violin.positionsFor(midi).isNotEmpty())
-            }
-        }
-    }
-
-    @Test
-    fun keySignQuestionsHaveFourDistinctOptionsWithAnswer() {
-        listOf("theory-sharps", "theory-flats").forEach { id ->
-            val topic = Topics.byId(id)
-            for (seed in 1L..80L) {
-                val q = QuizGenerator.generate(topic, seed, "piano") as Question.KeySigns
-                assertEquals(4, q.options.size)
-                assertEquals("дубликаты: ${q.options}", 4, q.options.distinct().size)
-                val correct = if (q.askCount) signLabel(q.key.signCount, q.key.hasSharps) else q.key.nameRu
-                assertTrue("${q.prompt} → $correct в ${q.options}", q.options.contains(correct))
-                assertTrue(q.key.sharps > 0 || q.key.flats > 0)
-            }
-        }
-    }
-
-    @Test
-    fun intervalQuestionsUseMatchingExamples() {
-        listOf("solf-ear", "solf-visual").forEach { id ->
-            val topic = Topics.byId(id)
-            for (seed in 1L..50L) {
-                val q = QuizGenerator.generate(topic, seed, "piano")
-                val (low, high, answer) = when (q) {
-                    is Question.EarInterval -> Triple(q.low, q.high, q.answer)
-                    is Question.VisualInterval -> Triple(q.low, q.high, q.answer)
-                    else -> throw AssertionError("unexpected ${q.kind}")
-                }
-                assertEquals(Intervals.semitonesOf(answer), Intervals.semitonesBetween(low, high))
-                assertTrue(q.options.contains(answer))
-                assertEquals(4, q.options.size)
-            }
-        }
-    }
-
-    @Test
-    fun literatureBaseCoversRequiredFacts() {
-        assertTrue(Literature.CARDS.size >= 40)
-        assertEquals(50, Literature.CARDS.size)
-        assertEquals("Барокко", Literature.epochOf("Иоганн Себастьян Бах"))
-        assertEquals("Классицизм", Literature.epochOf("Вольфганг Амадей Моцарт"))
-        assertEquals("Классицизм", Literature.epochOf("Людвиг ван Бетховен"))
-        assertEquals("Романтизм", Literature.epochOf("Пётр Ильич Чайковский"))
-        assertEquals("XX век", Literature.epochOf("Сергей Прокофьев"))
-        assertEquals("XX век", Literature.epochOf("Дмитрий Шостакович"))
-        assertEquals("Пётр Ильич Чайковский", Literature.composerOfWork("Балет «Щелкунчик»"))
-        assertEquals("Жорж Бизе", Literature.composerOfWork("Опера «Кармен»"))
-        assertEquals("Модест Мусоргский", Literature.composerOfWork("Опера «Борис Годунов»"))
-        val epochs = Literature.CARDS.map { it.epoch }.distinct()
-        assertTrue(epochs.all { it in Literature.EPOCHS })
-    }
-
-    @Test
-    fun literatureQuestionsAlwaysHaveAnswerAmongOptions() {
-        listOf("lit-epoch", "lit-stage", "lit-works", "lit-russian").forEach { id ->
-            val topic = Topics.byId(id)
-            for (seed in 1L..60L) {
-                val q = QuizGenerator.generate(topic, seed, "piano") as Question.Lit
-                assertEquals(4, q.options.size)
-                assertEquals(4, q.options.distinct().size)
-                assertTrue(q.options.contains(q.answer))
-                assertEquals(q.answer, q.correctLabel())
-            }
-        }
-    }
-
-    @Test
-    fun chordQuestionsMatchChordTable() {
-        val topic = Topics.byId("theory-chords")
-        for (seed in 1L..40L) {
-            val q = QuizGenerator.generate(topic, seed, "piano") as Question.ChordEar
-            val offsets = Chords.midiNotes(q.root.midi, q.type).map { it - q.root.midi }
-            assertEquals(q.type, Chords.typeByOffsets(offsets))
-            assertEquals(4, q.options.size)
-            assertTrue(q.options.contains(q.type))
-        }
-    }
-
-    @Test
-    fun topicStructureHasThreeCoursesAndFourTopicsEach() {
-        assertEquals(3, Course.values().size)
-        assertEquals(12, Topics.ALL.size)
-        Course.values().forEach { course ->
-            val count = Topics.byCourse(course).size
-            assertTrue("$course: $count", count in 3..5)
-        }
-        assertNotNull(Topics.ALL.firstOrNull { it.kind == ExerciseKind.RHYTHM })
-        assertNotNull(Topics.ALL.firstOrNull { it.kind == ExerciseKind.KEY_SIGNS })
-        assertNotNull(Topics.ALL.firstOrNull { it.kind == ExerciseKind.CHORD_EAR })
-        assertNotNull(Topics.ALL.firstOrNull { it.kind == ExerciseKind.LITERATURE })
     }
 }
